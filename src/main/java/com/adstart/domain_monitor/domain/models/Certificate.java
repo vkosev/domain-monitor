@@ -1,4 +1,4 @@
 package com.adstart.domain_monitor.domain.models;
 
-public class Certficate {
+public class Certificate {
 }

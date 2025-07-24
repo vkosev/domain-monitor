@@ -1,4 +1,7 @@
 package com.adstart.domain_monitor.rest.processors;
 
-public class CertificateWebProcessor {
+import org.springframework.stereotype.Component;
+
+@Component
+public class CertificateWebProcessor implements ICertificateWebProcessor {
 }
