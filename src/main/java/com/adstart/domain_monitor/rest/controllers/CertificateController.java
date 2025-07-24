@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.security.cert.X509Certificate;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -22,12 +22,10 @@ public class CertificateController {
     @GetMapping("certificate-test")
     public String testCertificate() {
         try {
-            final var certs = certificateExpirationService.getDomainCertificates("github.com");
-            for(X509Certificate cert : certs) {
-                LOGGER.info("Subject DN: {}", cert.getSubjectX500Principal());
-                LOGGER.info("SAN: {}", cert.getSubjectAlternativeNames());
-                LOGGER.info("Cert expiration date: {}", cert.getNotAfter());
-            }
+            final String url = "github.com";
+            final LocalDateTime expirationDate = certificateExpirationService.getDomainExpirationDate(url);
+
+            LOGGER.info("Expiration date for {} is {}", url, expirationDate);
 
         } catch (Exception e) {
             LOGGER.error("Error while getting certificate from certificate-expiration service", e);
