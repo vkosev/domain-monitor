@@ -9,16 +9,16 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - postgres-db-data:/var/lib/postgresql/data
+      - dom-monitor-db-data:/var/lib/postgresql/data
     networks:
       - dom-monitor-network
     restart: "unless-stopped"
 
 volumes:
-  postgres-db-data:
+  dom-monitor-db-data:
     name: dom-monitor-db-data
     driver: local
 
 networks:
-  postgres-network:
+  dom-monitor-network:
     name: dom-monitor-network
