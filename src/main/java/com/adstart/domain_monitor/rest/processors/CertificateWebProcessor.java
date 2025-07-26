@@ -3,12 +3,14 @@ package com.adstart.domain_monitor.rest.processors;
 import com.adstart.domain_monitor.domain.contracts.notification.INotificationService;
 import com.adstart.domain_monitor.domain.expiration.ICertificateExpirationManager;
 import com.adstart.domain_monitor.domain.models.CertificateExpiration;
+import com.adstart.domain_monitor.domain.models.ExpirationCheckRecord;
 import com.adstart.domain_monitor.domain.services.ICertificateExpirationService;
 import com.adstart.domain_monitor.rest.DomainProperties;
 import com.adstart.domain_monitor.rest.exceptions.DomainsAlreadyExistException;
 import com.adstart.domain_monitor.rest.exceptions.InvalidDomainsException;
 import com.adstart.domain_monitor.rest.models.response.AddDomainResponse;
 import com.adstart.domain_monitor.rest.models.response.CertificateExpirationCheckResponse;
+import com.adstart.domain_monitor.rest.models.response.DeleteCertificateResponse;
 import lombok.AllArgsConstructor;
 import org.apache.commons.validator.routines.DomainValidator;
 import org.slf4j.Logger;
@@ -18,6 +20,12 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
@@ -62,39 +70,42 @@ public class CertificateWebProcessor implements ICertificateWebProcessor {
         return new AddDomainResponse(addedDomains);
     }
 
+    private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        Set<Object> seen = ConcurrentHashMap.newKeySet();
+        return t -> seen.add(keyExtractor.apply(t));
+    }
+
     @Override
     public List<CertificateExpirationCheckResponse> checkCertificatesExpiration() {
-        final List<CertificateExpiration> certificateExpirations = certificateExpirationService.getAll();
+        final List<ExpirationCheckRecord> records = certificateExpirationManager.checkForExpirations();
 
-        final List<CertificateExpirationCheckResponse> certificateExpirationCheckResponses = new ArrayList<>();
-        final List<Integer> thresholds = domainProperties.getThresholds();
+        final List<ExpirationCheckRecord> uniqueDomainRecords = records.stream()
+                .filter(distinctByKey(ExpirationCheckRecord::getDomain))
+                .toList();
 
-        for(CertificateExpiration certificateExpiration : certificateExpirations) {
-            final LocalDateTime expirationDate = certificateExpiration.getExpirationDate();
+        return uniqueDomainRecords.stream()
+                .map(r -> CertificateExpirationCheckResponse.builder()
+                       .domain(r.getDomain())
+                       .expirationDate(r.getExpirationDate())
+                       .isExpired(r.isExpired())
+                       .daysLeft(r.getDaysLeft())
+                       .expirationChecks(records.stream()
+                               .filter(rr -> rr.getDomain().equals(r.getDomain()))
+                               .map(rr -> new CertificateExpirationCheckResponse.ExpirationCheck(rr.getThreshold(),
+                                       rr.isExceedsThreshold()))
+                               .toList())
+                       .build())
+                .toList();
+    }
 
-            for(Integer threshold : thresholds) {
-                final Boolean isExpired = certificateExpirationManager
-                        .isExpired(expirationDate, threshold);
+    @Override
+    public DeleteCertificateResponse deleteCertificate(String domain) {
+        final CertificateExpiration certificateExpiration = certificateExpirationService.deleteByDomain(domain);
 
-                if(isExpired) {
-                    LOGGER.info("Certificate for domain {} expires for threshold {}", certificateExpiration.getDomain(), threshold);
-                    notificationService.notifyAllRegisters(certificateExpiration.getDomain(),
-                            expirationDate,
-                            threshold);
+        final DeleteCertificateResponse response = new DeleteCertificateResponse();
+        response.setDomain(certificateExpiration.getDomain());
 
-                }
-            }
-
-            final int daysLeft = certificateExpirationManager.daysLeft(expirationDate);
-            certificateExpirationCheckResponses.add(CertificateExpirationCheckResponse.builder()
-                    .daysLeft(certificateExpirationManager.daysLeft(expirationDate))
-                    .isExpired(daysLeft < 0)
-                    .domain(certificateExpiration.getDomain())
-                    .expirationDate(expirationDate)
-                    .build());
-        }
-
-        return certificateExpirationCheckResponses;
+        return response;
     }
 
     private boolean allDomainsAreValid(List<String> domains) {

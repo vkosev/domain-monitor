@@ -1,6 +1,11 @@
 package com.adstart.domain_monitor.domain.expiration;
 
+import com.adstart.domain_monitor.database.repositories.ExpirationCheckRecordRepository;
+import com.adstart.domain_monitor.domain.contracts.notification.INotificationService;
 import com.adstart.domain_monitor.domain.exceptions.FailedCertificateExtractionException;
+import com.adstart.domain_monitor.domain.models.CertificateExpiration;
+import com.adstart.domain_monitor.domain.models.ExpirationCheckRecord;
+import com.adstart.domain_monitor.domain.services.ICertificateExpirationService;
 import com.adstart.domain_monitor.rest.DomainProperties;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -21,6 +26,8 @@ import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -28,7 +35,10 @@ import java.util.Optional;
 public class CertificateExpirationManager implements ICertificateExpirationManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(CertificateExpirationManager.class);
 
-    private final DomainProperties domainProperties;
+    private final ICertificateExpirationService     certificateExpirationService;
+    private final ExpirationCheckRecordRepository   expirationCheckRecordRepository;
+    private final DomainProperties                  domainProperties;
+    private final INotificationService              notificationService;
 
     @Override
     @Retryable(retryFor  = FailedCertificateExtractionException.class)
@@ -55,6 +65,11 @@ public class CertificateExpirationManager implements ICertificateExpirationManag
 
     @Override
     public Boolean isExpired(LocalDateTime expirationDate, int threshold) {
+        return null;
+    }
+
+    @Override
+    public Boolean exceedsThreshold(LocalDateTime expirationDate, int threshold) {
         final int daysLeft = daysLeft(expirationDate);
 
         return daysLeft < threshold;
@@ -67,6 +82,46 @@ public class CertificateExpirationManager implements ICertificateExpirationManag
         long daysLeft = ChronoUnit.DAYS.between(now, expirationDate);
 
         return Long.valueOf(daysLeft).intValue();
+    }
+
+    @Override
+    public List<ExpirationCheckRecord> checkForExpirations() {
+        final List<CertificateExpiration> certificateExpirations = certificateExpirationService.getAll();
+
+        final List<ExpirationCheckRecord> records = new ArrayList<>();
+
+        final List<Integer> thresholds = domainProperties.getThresholds();
+
+        for(CertificateExpiration certificateExpiration : certificateExpirations) {
+            final LocalDateTime expirationDate = certificateExpiration.getExpirationDate();
+
+            for(Integer threshold : thresholds) {
+                final Boolean exceedsThreshold = this.exceedsThreshold(expirationDate, threshold);
+
+                if(exceedsThreshold) {
+                    LOGGER.info("Certificate for domain {} exceeds threshold {} days! Sending Notifications", certificateExpiration.getDomain(), threshold);
+                    notificationService.notifyAllRegisters(certificateExpiration.getDomain(),
+                            expirationDate,
+                            threshold);
+
+                }
+
+                final int daysLeft = this.daysLeft(expirationDate);
+                records.add(ExpirationCheckRecord.builder()
+                        .daysLeft(daysLeft)
+                        .isExpired(daysLeft < 0)
+                        .domain(certificateExpiration.getDomain())
+                        .expirationDate(expirationDate)
+                        .threshold(threshold)
+                        .createdAt(LocalDateTime.now())
+                        .exceedsThreshold(exceedsThreshold)
+                        .build());
+            }
+        }
+
+        expirationCheckRecordRepository.saveAll(records);
+
+        return records;
     }
 
     private X509Certificate getDomainCertificates(String url)

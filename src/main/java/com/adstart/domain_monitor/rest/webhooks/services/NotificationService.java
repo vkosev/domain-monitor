@@ -58,7 +58,7 @@ public class NotificationService implements INotificationService {
           }
 
       } catch (IOException | InterruptedException e) {
-            LOGGER.error("Exception occurred while sending notification", e);
+            LOGGER.error("Exception occurred while sending notification to {}", url, e);
       }
     }
 

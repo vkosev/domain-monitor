@@ -31,4 +31,9 @@ public class CertificateExpirationService implements ICertificateExpirationServi
     public List<CertificateExpiration> getAll() {
         return certificateExpirationRepository.getAll();
     }
+
+    @Override
+    public CertificateExpiration deleteByDomain(String domainName) {
+        return certificateExpirationRepository.deleteByDomain(domainName);
+    }
 }

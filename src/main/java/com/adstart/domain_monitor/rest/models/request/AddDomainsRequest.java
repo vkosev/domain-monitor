@@ -10,6 +10,6 @@ import java.util.List;
 @Setter
 public class AddDomainsRequest {
 
-    @Schema(description = "List of domains to monitor", example = "github.com")
+    @Schema(description = "List of domains to monitor", example = "[\"github.com\", \"facebook.com\"]")
     private List<String> domains;
 }

@@ -12,4 +12,6 @@ public interface ICertificateExpirationRepository {
     void saveAll(List<CertificateExpiration> certificateExpirations);
 
     List<CertificateExpiration> getAll();
+
+    CertificateExpiration deleteByDomain(String domainName);
 }

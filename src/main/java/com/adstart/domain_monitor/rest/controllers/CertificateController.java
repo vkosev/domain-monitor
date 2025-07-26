@@ -4,6 +4,7 @@ import com.adstart.domain_monitor.rest.UriPaths;
 import com.adstart.domain_monitor.rest.models.request.AddDomainsRequest;
 import com.adstart.domain_monitor.rest.models.response.AddDomainResponse;
 import com.adstart.domain_monitor.rest.models.response.CertificateExpirationCheckResponse;
+import com.adstart.domain_monitor.rest.models.response.DeleteCertificateResponse;
 import com.adstart.domain_monitor.rest.models.response.ErrorResponse;
 import com.adstart.domain_monitor.rest.processors.ICertificateWebProcessor;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,7 +35,7 @@ public class CertificateController {
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Domains processed successfully",
+                            description = "Domains added successfully",
                             content = @Content(schema = @Schema(implementation = AddDomainResponse.class))
                     ),
                     @ApiResponse(
@@ -55,6 +56,35 @@ public class CertificateController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping(value = UriPaths.DELETE_DOMAINS, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Delete existing certificate expiration monitoring for a domain",
+            description = "Delete existing certificate expiration monitoring for a domain",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Domain deleted successfully",
+                            content = @Content(schema = @Schema(implementation = DeleteCertificateResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid request",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
+    public ResponseEntity<DeleteCertificateResponse> deleteDomain(@PathVariable final String domain) {
+        final DeleteCertificateResponse response = certificateWebProcessor.deleteCertificate(domain);
+
+        return ResponseEntity.ok(response);
+    }
+
+
 
     @GetMapping(value = UriPaths.CHECK_EXPIRATIONS, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
@@ -63,8 +93,8 @@ public class CertificateController {
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Domains processed successfully",
-                            content = @Content(schema = @Schema(implementation = AddDomainResponse.class))
+                            description = "Certificate expiration check successful",
+                            content = @Content(schema = @Schema(implementation = CertificateExpirationCheckResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "400",

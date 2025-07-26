@@ -68,4 +68,20 @@ public class CertificateExpirationRepository implements ICertificateExpirationRe
 
         return entities.stream().map(mapper::mapEntityCertificateExpirationToDomainModel).collect(Collectors.toList());
     }
+
+    @Override
+    public CertificateExpiration deleteByDomain(String domainName) {
+        final CertificateExpirationEntity existingEntity = certificateExpirationJpaRepository.findByDomain(domainName);
+        if(Objects.isNull(existingEntity)) {
+            LOGGER.error("Certificate for domain {} not found. Deletion failed!", domainName);
+
+            return new CertificateExpiration(domainName, null);
+        }
+
+        certificateExpirationJpaRepository.delete(existingEntity);
+
+        LOGGER.info("Deleted certificate expiration for domain {}", existingEntity.getDomain());
+
+        return mapper.mapEntityCertificateExpirationToDomainModel(existingEntity);
+    }
 }
