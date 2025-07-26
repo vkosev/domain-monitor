@@ -8,9 +8,12 @@ import com.adstart.domain_monitor.domain.models.ExpirationCheckRecord;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @AllArgsConstructor
@@ -38,5 +41,12 @@ public class ExpirationCheckRecordRepository implements IExpirationCheckRecordRe
         expirationCheckRecordJpaRepository.saveAllAndFlush(entities);
 
         LOGGER.info("Expiration Check Records saved successfully");
+    }
+
+    @Override
+    public Page<ExpirationCheckRecord> findAll(Pageable pageable) {
+        final Page<ExpirationCheckRecordEntity> entities = expirationCheckRecordJpaRepository.findAll(pageable);
+
+        return entities.map(mapper::mapEntityExpirationCheckRecordToDomainModel);
     }
 }

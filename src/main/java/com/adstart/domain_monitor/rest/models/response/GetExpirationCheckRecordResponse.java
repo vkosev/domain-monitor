@@ -1,5 +1,6 @@
 package com.adstart.domain_monitor.rest.models.response;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@Builder
 public class GetExpirationCheckRecordResponse {
     private Integer id;
     private String domain;

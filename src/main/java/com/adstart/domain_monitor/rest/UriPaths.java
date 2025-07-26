@@ -13,6 +13,7 @@ public class UriPaths {
     public static final String DELETE_DOMAINS = "/domains/delete/{domain}";
     public static final String GET_DOMAINS = "/domains/get";
 
+    // Expiration checks records related URIs
     public static final String GET_EXPIRATION_CHECK_RECORDS = "/domains/history/records";
 
     // Hooks related URIs

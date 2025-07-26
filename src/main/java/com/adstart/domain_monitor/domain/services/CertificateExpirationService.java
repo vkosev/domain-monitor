@@ -1,8 +1,12 @@
 package com.adstart.domain_monitor.domain.services;
 
+import com.adstart.domain_monitor.database.repositories.ExpirationCheckRecordRepository;
 import com.adstart.domain_monitor.domain.contracts.persistence.ICertificateExpirationRepository;
 import com.adstart.domain_monitor.domain.models.CertificateExpiration;
+import com.adstart.domain_monitor.domain.models.ExpirationCheckRecord;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class CertificateExpirationService implements ICertificateExpirationService {
     private final ICertificateExpirationRepository certificateExpirationRepository;
+    private final ExpirationCheckRecordRepository expirationCheckRecordRepository;
 
     @Override
     public CertificateExpiration save(CertificateExpiration certificateExpiration) {
@@ -35,5 +40,10 @@ public class CertificateExpirationService implements ICertificateExpirationServi
     @Override
     public CertificateExpiration deleteByDomain(String domainName) {
         return certificateExpirationRepository.deleteByDomain(domainName);
+    }
+
+    @Override
+    public Page<ExpirationCheckRecord> getExpirationCheckRecords(Pageable pageable) {
+        return expirationCheckRecordRepository.findAll(pageable);
     }
 }
