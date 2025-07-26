@@ -12,6 +12,5 @@ import java.util.List;
 @Getter
 @Setter
 public class DomainProperties {
-    private List<String> names;
     private List<Integer> thresholds;
 }

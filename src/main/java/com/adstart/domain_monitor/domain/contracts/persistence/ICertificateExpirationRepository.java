@@ -10,4 +10,6 @@ public interface ICertificateExpirationRepository {
     List<CertificateExpiration> getAllByDomainName(List<String> domainNames);
 
     void saveAll(List<CertificateExpiration> certificateExpirations);
+
+    List<CertificateExpiration> getAll();
 }

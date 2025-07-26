@@ -1,74 +1,87 @@
 package com.adstart.domain_monitor.rest.controllers;
 
-import com.adstart.domain_monitor.domain.models.CertificateExpiration;
-import com.adstart.domain_monitor.domain.services.ICertificateExpirationService;
-import com.adstart.domain_monitor.rest.DomainProperties;
 import com.adstart.domain_monitor.rest.UriPaths;
 import com.adstart.domain_monitor.rest.models.request.AddDomainsRequest;
 import com.adstart.domain_monitor.rest.models.response.AddDomainResponse;
+import com.adstart.domain_monitor.rest.models.response.CertificateExpirationCheckResponse;
+import com.adstart.domain_monitor.rest.models.response.ErrorResponse;
 import com.adstart.domain_monitor.rest.processors.ICertificateWebProcessor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping(UriPaths.BASE_API_VERSION)
 @AllArgsConstructor
+@Tag(name = "Certificate Expiration",
+        description = "Endpoints for managing and monitoring domain certificate expiration")
 public class CertificateController {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CertificateController.class);
-    private final ICertificateWebProcessor certificateWebProcessor;
-    private final ICertificateExpirationService certificateExpirationService;
-    private final DomainProperties domainProperties;
 
-    @GetMapping("certificate-test")
-    public String testCertificate() {
-        for(String domainName : domainProperties.getNames() ) {
-            final LocalDateTime expirationDate = certificateExpirationService.getDomainExpirationDate(domainName);
+    private final ICertificateWebProcessor      certificateWebProcessor;
 
-            LOGGER.info("Expiration date for {} is {}", domainName, expirationDate);
-
-            final List<Integer> thresholdDays = domainProperties.getThresholds();
-
-            for(Integer thresholdDay : thresholdDays) {
-                LOGGER.info("Checking expiration for {} days", thresholdDay);
-                checkExpiration(expirationDate, thresholdDay);
-
-                final CertificateExpiration certificateExpiration = new CertificateExpiration();
-                certificateExpiration.setExpirationDate(expirationDate);
-                certificateExpiration.setDomain(domainName);
-
-                final var savedCertificate = certificateExpirationService.save(certificateExpiration);
-                LOGGER.info("Saved expiration date for {} is {}", domainName, savedCertificate);
+    @PostMapping(value = UriPaths.ADD_DOMAINS, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Add domains and retrieve their certificate expiration",
+            description = "Retrieves the certificate expiration date for each provided domain and stores it.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Domains processed successfully",
+                            content = @Content(schema = @Schema(implementation = AddDomainResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid request",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    )
             }
-        }
-
-        return "test";
-    }
-
-    @PostMapping(UriPaths.ADD_DOMAINS)
+    )
     public ResponseEntity<AddDomainResponse> addDomain(@RequestBody final AddDomainsRequest request) {
         final AddDomainResponse response = certificateWebProcessor.addDomains(request.getDomains());
 
         return ResponseEntity.ok(response);
     }
 
-    private void checkExpiration(LocalDateTime expirationDate, int days) {
-        LocalDateTime now = LocalDateTime.now();
 
-        long daysLeft = ChronoUnit.DAYS.between(now, expirationDate);
+    @GetMapping(value = UriPaths.CHECK_EXPIRATIONS, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Check for certificates expiration status on added domains",
+            description = "Check for certificates expiration status on added domains",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Domains processed successfully",
+                            content = @Content(schema = @Schema(implementation = AddDomainResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid request",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal server error",
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
+    public ResponseEntity<List<CertificateExpirationCheckResponse>> checkCertificatesExpiration() {
+        final List<CertificateExpirationCheckResponse> responses = certificateWebProcessor.checkCertificatesExpiration();
 
-        if (daysLeft > days) {
-            LOGGER.info("Certificate is valid. Days left: {}", daysLeft);
-        } else if (daysLeft <= days) {
-           LOGGER.warn("Certificate is expiring soon! Days left: {}", daysLeft);
-        } else {
-            LOGGER.error("Expired {} days ago.", Math.abs(daysLeft));
-        }
+        return ResponseEntity.ok(responses);
     }
+
 }

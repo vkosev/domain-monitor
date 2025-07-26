@@ -5,6 +5,9 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class UriPaths {
-    public static final String ADD_DOMAINS = "/add-domains";
+    public static final String BASE_API_VERSION = "/api/v1";
+    public static final String ADD_DOMAINS = "/domains/add";
+    public static final String CHECK_EXPIRATIONS = "/domains/check-certificates";
+    public static final String GET_DOMAINS = "/domains/get";
     public static final String REGISTER_HOOK = "/hook/register";
 }

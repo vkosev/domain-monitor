@@ -36,6 +36,7 @@ public class CertificateExpirationRepository implements ICertificateExpirationRe
 
         final CertificateExpirationEntity savedEntity = certificateExpirationJpaRepository.save(newEntity);
 
+        LOGGER.info("Saved certificate expiration for domain {}", savedEntity.getDomain());
         return mapper.mapEntityCertificateExpirationToDomainModel(savedEntity);
     }
 
@@ -56,6 +57,15 @@ public class CertificateExpirationRepository implements ICertificateExpirationRe
                 .map(mapper::mapDomainCertificationToEntity)
                 .toList();
 
+        LOGGER.info("Certificates expirations for all domain added successfully");
+
         certificateExpirationJpaRepository.saveAll(entities);
+    }
+
+    @Override
+    public List<CertificateExpiration> getAll() {
+        final List<CertificateExpirationEntity> entities = certificateExpirationJpaRepository.findAll();
+
+        return entities.stream().map(mapper::mapEntityCertificateExpirationToDomainModel).collect(Collectors.toList());
     }
 }
