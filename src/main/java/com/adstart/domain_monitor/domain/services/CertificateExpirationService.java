@@ -1,10 +1,12 @@
 package com.adstart.domain_monitor.domain.services;
 
+import com.adstart.domain_monitor.domain.contracts.persistence.ICertificateExpirationRepository;
 import com.adstart.domain_monitor.domain.exceptions.FailedCertificateExtractionException;
+import com.adstart.domain_monitor.domain.models.CertificateExpiration;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.retry.RetryContext;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
@@ -19,11 +21,15 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 @Service
+@AllArgsConstructor
 public class CertificateExpirationService implements ICertificateExpirationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CertificateExpirationService.class);
+
+    private final ICertificateExpirationRepository certificateExpirationRepository;
 
     @Override
     @Retryable(retryFor  = FailedCertificateExtractionException.class)
@@ -40,16 +46,25 @@ public class CertificateExpirationService implements ICertificateExpirationServi
                                 .map(RetryContext::getRetryCount)
                                 .orElse(null);
 
-                LOGGER.warn(e.getMessage());
                 LOGGER.warn("Failed to retrieve expiration date for domain {} / Retrying attempt {}", url, retryCount);
 
                 throw new FailedCertificateExtractionException(String.format("Failed to retrieve expiration date for domain %s", url), e);
             }
     }
 
-    @Recover
-    public void recoverFromError(FailedCertificateExtractionException e, String url) {
-        throw new FailedCertificateExtractionException("Failed to retrieve expiration date for domain " + url, e);
+    @Override
+    public CertificateExpiration save(CertificateExpiration certificateExpiration) {
+        return certificateExpirationRepository.save(certificateExpiration);
+    }
+
+    @Override
+    public void saveAll(List<CertificateExpiration> certificateExpirations) {
+        certificateExpirationRepository.saveAll(certificateExpirations);
+    }
+
+    @Override
+    public List<CertificateExpiration> getAllByDomainName(List<String> domainNames) {
+        return certificateExpirationRepository.getAllByDomainName(domainNames);
     }
 
     private X509Certificate getDomainCertificates(String url)
