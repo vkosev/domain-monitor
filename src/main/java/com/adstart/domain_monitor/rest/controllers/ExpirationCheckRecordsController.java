@@ -1,12 +1,11 @@
 package com.adstart.domain_monitor.rest.controllers;
 
 import com.adstart.domain_monitor.rest.UriPaths;
-import com.adstart.domain_monitor.rest.models.request.RegisterHookRequest;
-import com.adstart.domain_monitor.rest.models.response.AddDomainResponse;
 import com.adstart.domain_monitor.rest.models.response.ErrorResponse;
-import com.adstart.domain_monitor.rest.models.response.RegisterHookResponse;
-import com.adstart.domain_monitor.rest.processors.IWebHookProcessor;
+import com.adstart.domain_monitor.rest.models.response.GetExpirationCheckRecordResponse;
+import com.adstart.domain_monitor.rest.processors.IExpirationCheckRecordsWebProcessor;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,30 +13,34 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping(UriPaths.BASE_API_VERSION)
 @AllArgsConstructor
-@Tag(name = "Web Hooks",
-        description = "Endpoints for managing web hooks")
-public class HooksController {
+@Tag(name = "Expiration Check Records",
+        description = "Endpoints for managing expiration checks records")
+public class ExpirationCheckRecordsController {
 
-    private final IWebHookProcessor webHookProcessor;
+    private final IExpirationCheckRecordsWebProcessor expirationCheckRecordsWebProcessor;
 
-    @PostMapping(value = UriPaths.REGISTER_HOOK, produces = MediaType.APPLICATION_JSON_VALUE)
+
+    @GetMapping(value = UriPaths.GET_EXPIRATION_CHECK_RECORDS, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
-            summary = "Register an url on which to send notification",
-            description = "Register an url on which to send notification when a certificate has expired",
+            summary = "Get expiration checks history records",
+            description = "Get expiration checks history records",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Domains processed successfully",
-                            content = @Content(schema = @Schema(implementation = AddDomainResponse.class))
+                            description = "Records Retrieved successfully",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    array = @ArraySchema(schema =
+                                        @Schema(implementation = GetExpirationCheckRecordResponse.class)))
                     ),
                     @ApiResponse(
                             responseCode = "400",
@@ -63,12 +66,7 @@ public class HooksController {
                     )
             }
     )
-    public ResponseEntity<RegisterHookResponse> register(@RequestBody final RegisterHookRequest request) {
-        webHookProcessor.save(request.getUrlCallback());
-
-        final RegisterHookResponse response = new RegisterHookResponse();
-        response.setCallbackUrl(request.getUrlCallback());
-
-        return ResponseEntity.ok(response);
+    public List<GetExpirationCheckRecordResponse> getAllRecords() {
+        return null;
     }
 }

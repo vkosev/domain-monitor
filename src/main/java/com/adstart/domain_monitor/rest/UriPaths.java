@@ -13,6 +13,8 @@ public class UriPaths {
     public static final String DELETE_DOMAINS = "/domains/delete/{domain}";
     public static final String GET_DOMAINS = "/domains/get";
 
+    public static final String GET_EXPIRATION_CHECK_RECORDS = "/domains/history/records";
+
     // Hooks related URIs
     public static final String REGISTER_HOOK = "/hook/register";
 }

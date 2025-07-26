@@ -2,13 +2,12 @@ package com.adstart.domain_monitor.rest.controllers;
 
 import com.adstart.domain_monitor.rest.UriPaths;
 import com.adstart.domain_monitor.rest.models.request.AddDomainsRequest;
-import com.adstart.domain_monitor.rest.models.response.AddDomainResponse;
-import com.adstart.domain_monitor.rest.models.response.CertificateExpirationCheckResponse;
-import com.adstart.domain_monitor.rest.models.response.DeleteCertificateResponse;
-import com.adstart.domain_monitor.rest.models.response.ErrorResponse;
+import com.adstart.domain_monitor.rest.models.response.*;
 import com.adstart.domain_monitor.rest.processors.ICertificateWebProcessor;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,7 +25,7 @@ import java.util.List;
         description = "Endpoints for managing and monitoring domain certificate expiration")
 public class CertificateController {
 
-    private final ICertificateWebProcessor      certificateWebProcessor;
+    private final ICertificateWebProcessor certificateWebProcessor;
 
     @PostMapping(value = UriPaths.ADD_DOMAINS, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
@@ -40,13 +39,25 @@ public class CertificateController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Invalid request",
+                            description = "Bad request",
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "500",
                             description = "Internal server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(
+                                            name = "Internal Server Error",
+                                            summary = "A generic server error response",
+                                            value = """
+                                    {
+                                      "errorType": "Internal Server Error",
+                                      "message": "Internal Server Error",
+                                      "timestamp": "2025-07-25T15:42:10"
+                                    }
+                                    """
+                                    ))
                     )
             }
     )
@@ -68,13 +79,25 @@ public class CertificateController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Invalid request",
+                            description = "Bad request",
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "500",
                             description = "Internal server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(
+                                            name = "Internal Server Error",
+                                            summary = "A generic server error response",
+                                            value = """
+                                    {
+                                      "errorType": "Internal Server Error",
+                                      "message": "Internal Server Error",
+                                      "timestamp": "2025-07-25T15:42:10"
+                                    }
+                                    """
+                                    ))
                     )
             }
     )
@@ -84,8 +107,6 @@ public class CertificateController {
         return ResponseEntity.ok(response);
     }
 
-
-
     @GetMapping(value = UriPaths.CHECK_EXPIRATIONS, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Check for certificates expiration status on added domains",
@@ -94,17 +115,31 @@ public class CertificateController {
                     @ApiResponse(
                             responseCode = "200",
                             description = "Certificate expiration check successful",
-                            content = @Content(schema = @Schema(implementation = CertificateExpirationCheckResponse.class))
-                    ),
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    array = @ArraySchema(schema =
+                                    @Schema(implementation = CertificateExpirationCheckResponse.class)))),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Invalid request",
+                            description = "Bad request",
                             content = @Content(schema = @Schema(implementation = ErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "500",
                             description = "Internal server error",
-                            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(
+                                    name = "Internal Server Error",
+                                    summary = "A generic server error response",
+                                    value = """
+                                    {
+                                      "errorType": "Internal Server Error",
+                                      "message": "Internal Server Error",
+                                      "timestamp": "2025-07-25T15:42:10"
+                                    }
+                                    """
+                            ))
                     )
             }
     )
