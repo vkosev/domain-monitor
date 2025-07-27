@@ -26,7 +26,7 @@ In the project application.properties file you will find the following important
   <br> currently default to `0 0 */1 * * *` which means every hour
 
 #### Swagger documentation available at ***http://localhost:8080/api/v1/docs***
-### AWS Lambda Notification Function available at ***https://github.com/vkosev/domain-monitor-lambda-notifier***
+#### AWS Lambda Notification Function available at ***https://github.com/vkosev/domain-monitor-lambda-notifier***
 
 There is simple golang web-server that listens for notification at 127.0.0.1:8090/notifications 
 <br> use it to test the web-hooks feature
