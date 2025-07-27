@@ -21,9 +21,9 @@ Spring Boot SSL Certficiates Expiration Monitor System & REST API
 ### Important application properties
 In the project application.properties file you will find the following important properties:
 * **domain.thresholds** - specify comma separated integers, representing 
-  <br>the thresholds(in days) for when send notifications. Default is 7,30,60 days
+  <br>the thresholds(in days) for when to send notifications. Default is 7,30,60 days
 * **scheduler.time** - Spring CRON expression, for when the scheduled job to be triggered.
-  <br> currently default to `0 0 */1 * * *` which means every hour
+  <br> currently defaults to `0 0 */1 * * *` which means every hour
 
 #### Swagger documentation available at ***http://localhost:8080/api/v1/docs***
 #### AWS Lambda Notification Function available at ***https://github.com/vkosev/domain-monitor-lambda-notifier***
