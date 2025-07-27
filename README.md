@@ -7,7 +7,7 @@ Spring Boot SSL Certficiates Expiration Monitor System & REST API
 
 ## How to setup and start locally
 1. Run PostgreSQL database
-    - There is **Docker Compose File** located in ***/src/main/java/resources***
+    - There is **Docker Compose File** located in ***/src/main/java/resources/docker***
       <br> To create and start docker container image use command `docker compose up -d` 
     - If you have PostgreSQL installed locally, then create database. If you chose this option 
       <br>edit the **application.properties** file accordingly
