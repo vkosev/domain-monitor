@@ -1,0 +1,238 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Java Application Infrastructure with ECS Fargate, RDS, CloudWatch, Lambda and SNS
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  EcrImageUri:
+    Type: String
+    Description: ECR URI for the Docker image
+  DBUsername:
+    Type: String
+  DBPassword:
+    Type: String
+    NoEcho: true
+  NotificationEmail:
+    Type: String
+    Description: Email address to subscribe to the SNS topic
+
+Resources:
+
+  RdsPostgresDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: java-app-db
+      AllocatedStorage: 20
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBName: domain_monitor
+      Port: 5432       
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !GetAtt RdsSecurityGroup.GroupId
+
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS security group
+      VpcId: !Ref VpcId
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Fargate security group
+      VpcId: !Ref VpcId
+
+  EcsIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: 8080
+      ToPort: 8080
+      CidrIp: 0.0.0.0/0
+
+  RdsIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RdsSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref EcsSecurityGroup
+
+  JavaAppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/java-app
+      RetentionInDays: 7
+
+  JavaAppCluster:
+    Type: AWS::ECS::Cluster
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: JavaAppTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  JavaAppTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities: [FARGATE]
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      ContainerDefinitions:
+        - Name: java-app
+          Image: !Ref EcrImageUri
+          PortMappings:
+            - ContainerPort: 8080
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref JavaAppLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            - Name: DB_USER
+              Value: !Ref DBUsername
+            - Name: DB_PASSWORD
+              Value: !Ref DBPassword
+            - Name: DB_URL
+              Value: !Sub jdbc:postgresql://${RdsPostgresDB.Endpoint.Address}:5432/domain_monitor
+
+  JavaAppEcsService:
+    Type: AWS::ECS::Service
+    DependsOn: RdsPostgresDB
+    Properties:
+      Cluster: !Ref JavaAppCluster
+      LaunchType: FARGATE
+      DesiredCount: 1
+      TaskDefinition: !Ref JavaAppTaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref EcsSecurityGroup
+          AssignPublicIp: ENABLED
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CertAlertLambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSCertificateManagerReadOnly
+
+  ExpirationSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ExpirationAlertsTopic
+
+  ExpirationSnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref ExpirationSnsTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  ExpirationLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ExpirationCheckLambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AllowRDSandSNSAndENIAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref ExpirationSnsTopic
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBInstances
+                  - rds:Connect
+                  - secretsmanager:GetSecretValue
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeSecurityGroups
+                Resource: '*'
+
+  ExpirationCheckLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: ExpirationCheckAndNotify
+      Runtime: java21
+      Handler: com.notifier.NotificationHandler::handleRequest
+      Role: !GetAtt ExpirationLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: domain-monitor-lambda
+        S3Key: lambda-expiration-notifier-1.0.0.jar
+      MemorySize: 512
+      Timeout: 30
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref EcsSecurityGroup
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          DB_USER: !Ref DBUsername
+          DB_PASSWORD: !Ref DBPassword
+          DB_URL: !Sub jdbc:postgresql://${RdsPostgresDB.Endpoint.Address}:5432/domain_monitor
+          SNS_TOPIC_ARN: !Ref ExpirationSnsTopic
+
+  ExpirationCheckScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: ExpirationCheckEvery6Hours
+      ScheduleExpression: rate(6 hours)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ExpirationCheckLambda.Arn
+          Id: ExpirationCheckTarget
+
+  ExpirationCheckLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExpirationCheckLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ExpirationCheckScheduleRule.Arn
